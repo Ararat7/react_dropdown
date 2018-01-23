@@ -46,20 +46,20 @@ export default class Dropdown extends Component {
 
     buildDropdown(dropdownData, level = 0) {
         let listItems = dropdownData.map((el, i) => {
+            let isSubtreeVisible = el.children && this.state.levels[level] && this.state.levels[level][i];
+
             return (
                 <li
-                    className={el.children && this.state.levels[level] && this.state.levels[level][i] ? `open` : ``}
+                    className={isSubtreeVisible ? `open` : ``}
                     onClick={(e) => {
                         this.onClick(e, i, level)
                     }}
                     key={i}>
                     <a href={el.link}>{el.label}</a>
-                    {el.children && this.state.levels[level] && this.state.levels[level][i] && (
-                        level === 0 ? (
-                            ReactDOM.createPortal(this.buildDropdown(el.children, level + 1), this.el)
-                        ) : (
+                    {isSubtreeVisible && (
+                        level === 0 ?
+                            ReactDOM.createPortal(this.buildDropdown(el.children, level + 1), this.el) :
                             this.buildDropdown(el.children, level + 1)
-                        )
                     )}
                 </li>
             );
