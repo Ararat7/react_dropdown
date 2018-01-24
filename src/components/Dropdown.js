@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
 
 import dropdownData from '../services/DropdownData'
 
@@ -7,97 +8,105 @@ export default class Dropdown extends Component {
     constructor(props) {
         super(props);
 
-        this.onClick = this.onClick.bind(this);
-        this.onTopLevelClick = this.onTopLevelClick.bind(this);
+        this.state = {
+            openedItems: []
+        };
 
         this.el = document.getElementById('dropdown-root');
+
+        document.addEventListener('click', this.onClickOutside.bind(this), false);
     }
 
-    onTopLevelClick(e, data) {
-        [...this.el.querySelectorAll(':scope > ul')].forEach((el, i) => {
-            if (el.classList.contains(data)) {
-                if (el.classList.contains('hidden')) {
-                    let rect = e.target.getBoundingClientRect();
-
-                    el.style.top = `${rect.top}px`;
-                    el.style.left = `${rect.left + rect.width + 2}px`;
-
-                    el.classList.remove('hidden');
-                } else {
-                    el.classList.add('hidden');
-                }
-                // el.classList.toggle('hidden');
-            } else {
-                el.classList.add('hidden');
-            }
-        });
+    onClickOutside(e) {
+        if (!e.target.closest('#dropdown-root, .level-0')) {
+            this.setState(() => {
+                return {
+                    openedItems: []
+                };
+            });
+        }
     }
 
-    onClick(e, index) {
+    onClick(e, index, level) {
         e.stopPropagation();
 
-        let siblings = e.target.parentNode.childNodes;
+        this.setState((prevState) => {
+            let stateObj = JSON.parse(JSON.stringify(prevState));
 
-        [...siblings].forEach((el, i) => {
-            let nestedList = el.querySelector(':scope > ul');
-            if (i === index) {
-                nestedList && nestedList.classList.toggle("hidden");
-            } else {
-                nestedList && nestedList.classList.add("hidden");
+            // hide higher levels
+            if (stateObj.openedItems.length > level) {
+                stateObj.openedItems = stateObj.openedItems.slice(0, level + 1);
             }
+
+            // close all lists on the same level and toggle the needed one
+            let newState = stateObj.openedItems[level] ? !stateObj.openedItems[level][index] : true;
+            stateObj.openedItems[level] = [];
+            stateObj.openedItems[level][index] = newState;
+
+            return stateObj;
         });
-
-
     }
 
-    buildDropdown(dropdownData) {
+    buildDropdown(dropdownData, level = 0, parentId = 'root') {
         let listItems = dropdownData.map((el, i) => {
+            let isSubtreeVisible = el.children && this.state.openedItems[level] && this.state.openedItems[level][i];
+            let subTree = isSubtreeVisible && (level === 0 ?
+                ReactDOM.createPortal(this.buildDropdown(el.children, level + 1, el.id), this.el) :
+                this.buildDropdown(el.children, level + 1, el.id));
+
             return (
-                <li onClick={e => {
-                    this.onTopLevelClick(e, `nested-dropdown-${i}`)
-                }} key={i}>
+                <li
+                    className={isSubtreeVisible ? `open` : ``}
+                    onClick={(e) => {
+                        this.onClick(e, i, level)
+                    }}
+                    key={el.id}>
                     <a href={el.link}>{el.label}</a>
-                    {el.children && (
-                        ReactDOM.createPortal((
-                            <ul className={`hidden nested-dropdown-${i}`}>
-                                {this.buildNestedDropdown(el.children)}
-                            </ul>
-                        ), this.el)
-                    )}
+                    {subTree}
                 </li>
             );
         });
 
         return (
-            <ul className="top-level-dropdown">
-                {listItems}
-            </ul>
+            <ReactCSSTransitionGroup
+                transitionName="example"
+                transitionAppear={true}
+                transitionAppearTimeout={500}
+                transitionEnterTimeout={500}
+                transitionLeaveTimeout={500}>
+                <ul key={parentId}
+                    className={`level-${level}`}
+                    ref={node => this.handleRef(node, level)}>
+                    {listItems}
+                </ul>
+            </ReactCSSTransitionGroup>
         );
     }
 
-    buildNestedDropdown(items) {
-        return items.map((el, i) => {
-            return (
-                <li onClick={(e) => {
-                    this.onClick(e, i)
-                }} key={i}>
-                    <a href={el.link}>{el.label}</a>
-                    {el.children && (
-                        <ul className={`hidden`}>
-                            {this.buildNestedDropdown(el.children)}
-                        </ul>
-                    )}
-                </li>
-            );
-        });
+    handleRef(node, level) {
+        if (level === 1) {
+            this.ul = node;
+        }
     }
 
-    componentWillMount() {
-        this.dropdown = this.buildDropdown(dropdownData);
+    componentDidUpdate() {
+        // update position of the 1-st level ul
+        if (this.state.openedItems[0] && this.ul) {
+            let index = this.state.openedItems[0].indexOf(true);
+            if (!~index) {
+                return;
+            }
+
+            let li = document.querySelectorAll('.level-0 li')[index];
+            let rect = li.getBoundingClientRect();
+
+            this.ul.style.top = `${rect.top}px`;
+            this.ul.style.left = `${rect.left + rect.width + 2}px`;
+        }
     }
 
     render() {
-        return this.dropdown;
+        return this.buildDropdown(dropdownData);
     }
 
 };

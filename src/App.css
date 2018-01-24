@@ -1,37 +1,81 @@
 body {
-  margin: 0;
-  padding: 10px;
-  position: relative;
+    margin: 0;
+    padding: 10px;
+    position: relative;
+    box-sizing: border-box;
+}
+
+body * {
+    box-sizing: inherit;
 }
 
 ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  width: 200px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    width: 200px;
 }
 
 li {
-  margin: 0 2px 2px 0;
-  padding: 10px;
-  background-color: lightgray;
-  border-radius: 3px;
+    margin: 0 2px 2px 0;
+    background-color: lightgray;
+    border-radius: 3px;
+}
+
+li.open {
+    background-color: lightsteelblue;
+}
+
+li > a {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    text-decoration: none;
+    color: black;
 }
 
 .hidden {
-  display: none;
+    display: none;
 }
 
-#dropdown-root > ul {
-  position: absolute;
+#dropdown-root ul {
+    position: absolute;
 }
 
 #dropdown-root ul > li {
-  position: relative;
+    position: relative;
 }
 
-#dropdown-root ul > li > ul {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 2px);
+#dropdown-root ul:not(.level-1) {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 2px);
+}
+
+/* animations */
+.example-enter {
+    opacity: 0;
+    transition: opacity .5s ease-in;
+}
+
+.example-enter.example-enter-active {
+    opacity: 1;
+}
+
+.example-leave {
+    opacity: 1;
+    transition: opacity .5s ease-in;
+}
+
+.example-leave.example-leave-active {
+    opacity: 0;
+}
+
+.example-appear {
+    opacity: 0;
+    transition: opacity .5s ease-in;
+}
+
+.example-appear.example-appear-active {
+    opacity: 1;
 }
