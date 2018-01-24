@@ -2,6 +2,11 @@ body {
     margin: 0;
     padding: 10px;
     position: relative;
+    box-sizing: border-box;
+}
+
+body * {
+    box-sizing: inherit;
 }
 
 ul {
@@ -33,7 +38,7 @@ li > a {
     display: none;
 }
 
-#dropdown-root > ul {
+#dropdown-root ul {
     position: absolute;
 }
 
@@ -41,8 +46,36 @@ li > a {
     position: relative;
 }
 
-#dropdown-root ul > li > ul {
+#dropdown-root ul:not(.level-1) {
     position: absolute;
     top: 0;
     left: calc(100% + 2px);
+}
+
+/* animations */
+.example-enter {
+    opacity: 0;
+    transition: opacity .5s ease-in;
+}
+
+.example-enter.example-enter-active {
+    opacity: 1;
+}
+
+.example-leave {
+    opacity: 1;
+    transition: opacity .5s ease-in;
+}
+
+.example-leave.example-leave-active {
+    opacity: 0;
+}
+
+.example-appear {
+    opacity: 0;
+    transition: opacity .5s ease-in;
+}
+
+.example-appear.example-appear-active {
+    opacity: 1;
 }

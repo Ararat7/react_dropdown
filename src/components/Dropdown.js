@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
 
 import dropdownData from '../services/DropdownData'
 
@@ -8,7 +9,7 @@ export default class Dropdown extends Component {
         super(props);
 
         this.state = {
-            levels: []
+            openedItems: []
         };
 
         this.el = document.getElementById('dropdown-root');
@@ -20,7 +21,7 @@ export default class Dropdown extends Component {
         if (!e.target.closest('#dropdown-root, .level-0')) {
             this.setState(() => {
                 return {
-                    levels: []
+                    openedItems: []
                 };
             });
         }
@@ -30,23 +31,28 @@ export default class Dropdown extends Component {
         e.stopPropagation();
 
         this.setState((prevState) => {
+            let stateObj = JSON.parse(JSON.stringify(prevState));
+
             // hide higher levels
-            if (prevState.levels.length > level) {
-                prevState.levels = prevState.levels.slice(0, level + 1);
+            if (stateObj.openedItems.length > level) {
+                stateObj.openedItems = stateObj.openedItems.slice(0, level + 1);
             }
 
             // close all lists on the same level and toggle the needed one
-            let newState = prevState.levels[level] ? !prevState.levels[level][index] : true;
-            prevState.levels[level] = [];
-            prevState.levels[level][index] = newState;
+            let newState = stateObj.openedItems[level] ? !stateObj.openedItems[level][index] : true;
+            stateObj.openedItems[level] = [];
+            stateObj.openedItems[level][index] = newState;
 
-            return prevState;
+            return stateObj;
         });
     }
 
-    buildDropdown(dropdownData, level = 0) {
+    buildDropdown(dropdownData, level = 0, parentId = 'root') {
         let listItems = dropdownData.map((el, i) => {
-            let isSubtreeVisible = el.children && this.state.levels[level] && this.state.levels[level][i];
+            let isSubtreeVisible = el.children && this.state.openedItems[level] && this.state.openedItems[level][i];
+            let subTree = isSubtreeVisible && (level === 0 ?
+                ReactDOM.createPortal(this.buildDropdown(el.children, level + 1, el.id), this.el) :
+                this.buildDropdown(el.children, level + 1, el.id));
 
             return (
                 <li
@@ -54,23 +60,26 @@ export default class Dropdown extends Component {
                     onClick={(e) => {
                         this.onClick(e, i, level)
                     }}
-                    key={i}>
+                    key={el.id}>
                     <a href={el.link}>{el.label}</a>
-                    {isSubtreeVisible && (
-                        level === 0 ?
-                            ReactDOM.createPortal(this.buildDropdown(el.children, level + 1), this.el) :
-                            this.buildDropdown(el.children, level + 1)
-                    )}
+                    {subTree}
                 </li>
             );
         });
 
         return (
-            <ul
-                className={`level-${level}`}
-                ref={node => this.handleRef(node, level)}>
-                {listItems}
-            </ul>
+            <ReactCSSTransitionGroup
+                transitionName="example"
+                transitionAppear={true}
+                transitionAppearTimeout={500}
+                transitionEnterTimeout={500}
+                transitionLeaveTimeout={500}>
+                <ul key={parentId}
+                    className={`level-${level}`}
+                    ref={node => this.handleRef(node, level)}>
+                    {listItems}
+                </ul>
+            </ReactCSSTransitionGroup>
         );
     }
 
@@ -82,13 +91,13 @@ export default class Dropdown extends Component {
 
     componentDidUpdate() {
         // update position of the 1-st level ul
-        if (this.state.levels[0] && this.ul) {
-            let index = this.state.levels[0].indexOf(true);
+        if (this.state.openedItems[0] && this.ul) {
+            let index = this.state.openedItems[0].indexOf(true);
             if (!~index) {
                 return;
             }
 
-            let li = document.querySelectorAll('.level-0 > li')[index];
+            let li = document.querySelectorAll('.level-0 li')[index];
             let rect = li.getBoundingClientRect();
 
             this.ul.style.top = `${rect.top}px`;
